@@ -50,7 +50,7 @@
       publish_pressure: false
 
     mapping:
-      enabled: false             # biarkan false kalau pakai nvblox/elevation_mapping
+      enabled: true             # biarkan false kalau pakai nvblox/elevation_mapping
 
     diagnostics:
       pub_period: 1.0            # diagnostic msg period (s)
