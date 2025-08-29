@@ -33,12 +33,19 @@ add_executable(cloud_save src/cloud_save.cpp)
 ament_target_dependencies(cloud_save rclcpp sensor_msgs pcl_conversions)
 target_link_libraries(cloud_save ${PCL_LIBRARIES})
 
-install(TARGETS
-  zed_segmentation
-  DESTINATION lib/${PROJECT_NAME})
+add_executable(plane_segmentation src/plane_segmentation.cpp)
+ament_target_dependencies(plane_segmentation rclcpp sensor_msgs pcl_conversions)
+target_link_libraries(plane_segmentation ${PCL_LIBRARIES})
+
+add_executable(clustering src/clustering.cpp)
+ament_target_dependencies(clustering rclcpp sensor_msgs pcl_conversions)
+target_link_libraries(clustering ${PCL_LIBRARIES})
 
 install(TARGETS
+  zed_segmentation
   cloud_save
+  plane_segmentation
+  clustering
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
