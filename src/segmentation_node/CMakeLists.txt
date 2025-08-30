@@ -13,6 +13,8 @@ find_package(sensor_msgs REQUIRED)
 find_package(PCL REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(pcl_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
 include_directories(${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
@@ -34,15 +36,19 @@ ament_target_dependencies(cloud_save rclcpp sensor_msgs pcl_conversions)
 target_link_libraries(cloud_save ${PCL_LIBRARIES})
 
 add_executable(plane_segmentation src/plane_segmentation.cpp)
-ament_target_dependencies(plane_segmentation rclcpp sensor_msgs pcl_conversions)
+ament_target_dependencies(plane_segmentation rclcpp sensor_msgs pcl_conversions visualization_msgs)
 target_link_libraries(plane_segmentation ${PCL_LIBRARIES})
 
 add_executable(clustering src/clustering.cpp)
 ament_target_dependencies(clustering rclcpp sensor_msgs pcl_conversions)
 target_link_libraries(clustering ${PCL_LIBRARIES})
 
+add_executable(landing_circle src/landing_circle.cpp)
+ament_target_dependencies(landing_circle rclcpp visualization_msgs pcl_conversions sensor_msgs)
+
 install(TARGETS
   zed_segmentation
+  landing_circle
   cloud_save
   plane_segmentation
   clustering
