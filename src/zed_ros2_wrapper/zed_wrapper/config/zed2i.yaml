@@ -1,63 +1,56 @@
-# config/zed2i_yaml
-# Parameters for Stereolabs zed2i camera
 ---
 /**:
-    ros__parameters:
-        general:
-            camera_model: 'zed2i'
-            camera_name: 'zed2i' # overwritten by launch file
-            grab_resolution: 'HD1080' # The native camera grab resolution. 'HD2K', 'HD1080', 'HD720', 'VGA', 'AUTO'
-            grab_frame_rate: 15 # ZED SDK internal grabbing rate
-            pub_frame_rate: 15.0
-            gpu_id: 0
+  ros__parameters:
 
-        video:
-            brightness: 4 # [DYNAMIC] Image brightness. Range: 0-8
-            contrast: 4 # [DYNAMIC] Image contrast. Range: 0-8
-            hue: 0 # [DYNAMIC] Image hue. Range: 0 to 11
-            saturation: 4
-            sharpness: 4
-            gamma: 8
-            auto_exposure_gain: true
-            gain: 50
-            exposure: 50
-            auto_whitebalance: true
-            whitebalance_temperature: 42
-            compressed_stream: true
+    general:
+      camera_model: 'zed2i'
+      camera_name: 'zed2i'       # bisa diubah via launch arg
+      grab_resolution: 'HD1080'   # 'HD2K', 'HD1080', 'HD720', 'VGA', 'AUTO'
+      grab_frame_rate: 25        # ZED SDK grabbing rate (FPS)
+      pub_frame_rate: 25.0
+      gpu_id: 0               # -1 = auto, atau 0 untuk Orin Nano
 
-        depth:
-            depth_mode: 'NEURAL'
-            min_depth: 0.5
-            max_depth: 20.0 # Max: 40.0
-            depth_stabilization: 1
-            openni_depth_mode: false
-            confidence_threshold: 40
-            textureness_confidence_threshold: 40
+    video:
+      brightness: 4              # [DYNAMIC] 0–8
+      contrast: 4                # [DYNAMIC] 0–8
+      hue: 0                     # [DYNAMIC] 0–11
+      saturation: 4              # [DYNAMIC] 0–8
+      sharpness: 4               # [DYNAMIC] 0–8
+      gamma: 8                   # [DYNAMIC] 1–9
+      auto_exposure_gain: true   # auto exposure & gain
+      gain: 50                   # manual gain (0–100) kalau auto_exposure_gain=false
+      exposure: 50               # manual exposure (0–100) kalau auto_exposure_gain=false
+      auto_whitebalance: true
+      whitebalance_temperature: 42 # jika auto_whitebalance=false
+      compressed_stream: true    # aktifkan compressed image stream
 
-        pos_tracking:
-            pos_tracking_enabled: true
-            publish_tf: true
-            publish_map_tf: false
-            area_memory: false
-            area_memory_db_path: ""
-            imu_fusion: true
+    depth:
+        depth_mode: 'ULTRA'        # 'NONE','PERFORMANCE','QUALITY','ULTRA'
+        min_depth: 0.5
+        max_depth: 20.0
+        depth_stabilization: 1
+        openni_depth_mode: false
+        confidence_threshold: 35          # opsional (lebih toleran)
+        textureness_confidence_threshold: 35
 
-        sensors:
-            sensor_timestamp_sync: true
-            publish_imu_tf: false
-            publsh_imu: true
-            publish_magnetometer: false
-            publish_temperature: false
-            publish_pressure: false
+    pos_tracking:
+      pos_tracking_enabled: true # ⬅️ harus true untuk elevation/Nvblox
+      publish_tf: true           # publish odom->base_link->camera_link TF
+      publish_map_tf: false      # map->odom TF (set true kalau butuh global map)
+      area_memory: false
+      area_memory_db_path: ""
+      imu_fusion: true           # gunakan IMU untuk VIO fusion
 
-        mapping:
-            false
+    sensors:
+      sensors_timestamp_sync: true
+      publish_imu_tf: false      # publish TF untuk IMU link (opsional)
+      publish_imu: true          # publish sensor_msgs/Imu
+      publish_magnetometer: false
+      publish_temperature: false
+      publish_pressure: false
 
-        diagnostics:
-            pub_period: 1.0
+    mapping:
+      enabled: false             # biarkan false kalau pakai nvblox/elevation_mapping
 
-        point_cloud:
-            pub_point_cloud: true
-            point_cloud_freq: 15.0
-            point_cloud_res: "HD720"
-
+    diagnostics:
+      pub_period: 1.0            # diagnostic msg period (s)
