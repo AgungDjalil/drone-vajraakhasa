@@ -20,7 +20,7 @@
 
 class ZedSegmentation : public rclcpp::Node {
   public:
-    ZedSegmentation() : Node("zed_segmentation") {
+    ZedSegmentation() : Node("plane_segmentation") {
       // I/O topics
       this->declare_parameter<std::string>("input_topic", "/zed/zed_node/point_cloud/cloud_registered");
       this->declare_parameter<std::string>("output_topic", "/segmented");

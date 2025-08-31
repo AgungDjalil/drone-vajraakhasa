@@ -6,8 +6,8 @@
       camera_model: 'zed2i'
       camera_name: 'zed2i'       # bisa diubah via launch arg
       grab_resolution: 'HD1080'   # 'HD2K', 'HD1080', 'HD720', 'VGA', 'AUTO'
-      grab_frame_rate: 25        # ZED SDK grabbing rate (FPS)
-      pub_frame_rate: 25.0
+      grab_frame_rate: 30        # ZED SDK grabbing rate (FPS)
+      pub_frame_rate: 30.0
       gpu_id: 0               # -1 = auto, atau 0 untuk Orin Nano
 
     video:
@@ -26,12 +26,12 @@
 
     depth:
         depth_mode: 'ULTRA'        # 'NONE','PERFORMANCE','QUALITY','ULTRA'
-        min_depth: 0.5
-        max_depth: 20.0
-        depth_stabilization: 1
+        min_depth: 1.0
+        max_depth: 15.0
+        depth_stabilization: 2
         openni_depth_mode: false
-        confidence_threshold: 35          # opsional (lebih toleran)
-        textureness_confidence_threshold: 35
+        confidence_threshold: 40          # opsional (lebih toleran)
+        textureness_confidence_threshold: 40
 
     pos_tracking:
       pos_tracking_enabled: true # ⬅️ harus true untuk elevation/Nvblox
