@@ -35,6 +35,10 @@ add_executable(cloud_save src/cloud_save.cpp)
 ament_target_dependencies(cloud_save rclcpp sensor_msgs pcl_conversions)
 target_link_libraries(cloud_save ${PCL_LIBRARIES})
 
+add_executable(plane_segmentation_temp src/plane_segmentation_temp.cpp)
+ament_target_dependencies(plane_segmentation_temp rclcpp sensor_msgs pcl_conversions)
+target_link_libraries(plane_segmentation_temp ${PCL_LIBRARIES})
+
 add_executable(plane_segmentation src/plane_segmentation.cpp)
 ament_target_dependencies(plane_segmentation rclcpp sensor_msgs pcl_conversions visualization_msgs)
 target_link_libraries(plane_segmentation ${PCL_LIBRARIES})

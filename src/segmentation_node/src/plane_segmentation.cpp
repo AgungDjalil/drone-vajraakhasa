@@ -18,9 +18,9 @@
 #include <deque>     // <--- perlu untuk BFS
 #include <cmath>
 
-class ZedSegmentation : public rclcpp::Node {
+class PlaneSegmentation : public rclcpp::Node {
   public:
-    ZedSegmentation() : Node("plane_segmentation") {
+    PlaneSegmentation() : Node("plane_segmentation") {
       // I/O topics
       this->declare_parameter<std::string>("input_topic", "/zed/zed_node/point_cloud/cloud_registered");
       this->declare_parameter<std::string>("output_topic", "/segmented");
@@ -56,7 +56,7 @@ class ZedSegmentation : public rclcpp::Node {
 
       sub_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(
         in, rclcpp::SensorDataQoS(),
-        std::bind(&ZedSegmentation::cloudCb, this, std::placeholders::_1));
+        std::bind(&PlaneSegmentation::cloudCb, this, std::placeholders::_1));
 
       pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(out, 10);
 
@@ -98,6 +98,7 @@ class ZedSegmentation : public rclcpp::Node {
         pass.setFilterLimits(z_min, z_max);
         pass.filter(*roi);
       }
+
       if (roi->empty()) return;
 
       // Downsample
@@ -360,7 +361,7 @@ class ZedSegmentation : public rclcpp::Node {
 
 int main(int argc, char** argv) {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<ZedSegmentation>());
+  rclcpp::spin(std::make_shared<PlaneSegmentation>());
   rclcpp::shutdown();
   return 0;
 }
