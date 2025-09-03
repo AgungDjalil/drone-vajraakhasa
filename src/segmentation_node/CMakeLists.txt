@@ -55,6 +55,7 @@ install(TARGETS
   landing_circle
   cloud_save
   plane_segmentation
+  plane_segmentation_temp
   clustering
   DESTINATION lib/${PROJECT_NAME})
 
