@@ -10,7 +10,7 @@ HoverOnly::HoverOnly(const std::string &name) : Node(name)
 
     offboard_setpoint_counter_ = 0;
     
-    timer_ = create_wall_timer(50ms, std::bind(&HoverOnly::timer_callback, this)); 
+    timer_ = create_wall_timer(20ms, std::bind(&HoverOnly::timer_callback, this)); 
 }
 
 void HoverOnly::local_position_callback(px4_msgs::msg::VehicleLocalPosition::ConstSharedPtr msg)
@@ -59,21 +59,34 @@ void HoverOnly::timer_callback()
         if (initial_position_set_) phase_ = Phase::ARMED_SETTLE;
     }
 
-    publish_offboard_control_mode();
+    if (offboard_setpoint_counter_ == 600)
+    {
+        land();
+        timer_->cancel();
+    }
 
+    publish_offboard_control_mode();
+    publish_trajectory_setpoint();
+
+    offboard_setpoint_counter_++;
+}
+
+void HoverOnly::land()
+{
+  publish_vehicle_command(px4_msgs::msg::VehicleCommand::VEHICLE_CMD_NAV_LAND);
+  RCLCPP_INFO(get_logger(), "Land command sent (after 60s)");
+}
+
+void HoverOnly::publish_trajectory_setpoint()
+{
     px4_msgs::msg::TrajectorySetpoint sp{};
     const float NaN = std::numeric_limits<float>::quiet_NaN();
 
-    if (!initial_position_set_) 
-    {
-        sp.position = { curr_x_, curr_y_, curr_z_ };
-        sp.yaw = curr_yaw_;
-    }
-    else if (phase_ == Phase::ARMED_SETTLE) 
+    if (phase_ == Phase::ARMED_SETTLE) 
     {
         sp.position = { initial_x_, initial_y_, initial_z_ };
         sp.yaw = initial_yaw_;
-        if (offboard_setpoint_counter_ > 50) {
+        if (offboard_setpoint_counter_ > 20) {
             phase_ = Phase::TAKEOFF;
         }
     }
@@ -94,30 +107,22 @@ void HoverOnly::timer_callback()
 
     sp.timestamp = rclcpp::Clock().now().nanoseconds() / 1000;
     trajectory_setpoint_publisher_->publish(sp);
-    offboard_setpoint_counter_++;
-}
-
-void HoverOnly::land()
-{
-  publish_vehicle_command(px4_msgs::msg::VehicleCommand::VEHICLE_CMD_NAV_LAND);
-  RCLCPP_INFO(get_logger(), "Land command sent (after 60s)");
-}
-
-void HoverOnly::publish_trajectory_setpoint()
-{
-    px4_msgs::msg::TrajectorySetpoint msg{};
-    
-    msg.position = {initial_x_, initial_y_, -1.0f};
-    msg.yaw = initial_z_;
-    msg.timestamp = get_clock()->now().nanoseconds() / 1000;
-    trajectory_setpoint_publisher_->publish(msg);
 }
 
 void HoverOnly::publish_offboard_control_mode()
 {
     px4_msgs::msg::OffboardControlMode msg{};
+    
+    if(phase_ == Phase::HOLD)
+    {
+        msg.velocity = false;
+    }
+    else 
+    {
+        msg.velocity = true;
+    }
+    
     msg.position = true;
-    msg.velocity = true;
     msg.acceleration = false;
     msg.attitude = false;
     msg.body_rate = false;

@@ -47,8 +47,8 @@ class HoverOnly : public rclcpp::Node
 
         std::vector<double> xs_, ys_, zs_;
         Phase phase_{Phase::WAIT_INIT};
-        const float target_alt_m_ = 2.0f;
-        const float vz_up_        = -0.3f;
+        const float target_alt_m_ = 10.0f;
+        const float vz_up_        = -1.0f;
         
         void local_position_callback(px4_msgs::msg::VehicleLocalPosition::ConstSharedPtr msg);
         void timer_callback();

@@ -14,13 +14,17 @@ include_directories(include)
 add_executable(hover_only src/hover_only.cpp)
 ament_target_dependencies(hover_only rclcpp px4_msgs)
 
+add_executable(lqi_hover src/lqi_hover.cpp)
+ament_target_dependencies(lqi_hover rclcpp px4_msgs)
+
 install(
   DIRECTORY include 
   DESTINATION include
 )
 
 install(TARGETS 
-  hover_only 
+  hover_only
+  lqi_hover
   DESTINATION lib/${PROJECT_NAME}
 )
 
