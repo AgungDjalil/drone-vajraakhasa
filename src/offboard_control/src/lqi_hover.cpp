@@ -20,7 +20,7 @@ public:
   {
     // ===== Parameters (tune di runtime via ros2 param set) =====
     // Target altitude (m, positif ke ATAS)
-    target_alt_m_ = declare_parameter<float>("target_alt_m", 10.0f);
+    target_alt_m_ = declare_parameter<float>("target_alt_m", 1.0f);
 
     // Gains LQI (diagonal)
     kpx_ = declare_parameter<double>("kpx", 1.2);
