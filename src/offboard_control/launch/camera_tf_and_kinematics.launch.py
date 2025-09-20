@@ -23,24 +23,22 @@ def generate_launch_description():
     veh_odom_topic = LaunchConfiguration('veh_odom_topic')
 
     return LaunchDescription([
-        # ====== Defaults (ubah saat launch bila perlu) ======
-        DeclareLaunchArgument('cam_x',  default_value='0.12'),
+        DeclareLaunchArgument('cam_x',  default_value='0.20'),
         DeclareLaunchArgument('cam_y',  default_value='0.0'),
         DeclareLaunchArgument('cam_z',  default_value='-0.05'),
-        # contoh pitch +15° → qy ≈ 0.130526 ; kalau lurus pakai 0 0 0 1
-        DeclareLaunchArgument('cam_qx', default_value='0.0'),
-        DeclareLaunchArgument('cam_qy', default_value='0.130526'),
-        DeclareLaunchArgument('cam_qz', default_value='0.0'),
-        DeclareLaunchArgument('cam_qw', default_value='0.991445'),
+        
+        DeclareLaunchArgument('cam_qx', default_value='0'),
+        DeclareLaunchArgument('cam_qy', default_value='0.70710678'),
+        DeclareLaunchArgument('cam_qz', default_value='0'),
+        DeclareLaunchArgument('cam_qw', default_value='0.70710678'),
 
         DeclareLaunchArgument('base_link_frame',      default_value='base_link'),
-        DeclareLaunchArgument('camera_frame',         default_value='camera_link'),
-        DeclareLaunchArgument('camera_optical_frame', default_value='camera_optical_frame'),
+        DeclareLaunchArgument('camera_frame',         default_value='zed_camera_link'),
+        DeclareLaunchArgument('camera_optical_frame', default_value='zed_camera_optical_frame'),
 
         DeclareLaunchArgument('odom_frame',     default_value='odom'),
         DeclareLaunchArgument('veh_odom_topic', default_value='/fmu/out/vehicle_odometry'),
 
-        # ====== TF statik: base_link -> camera_frame ======
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -52,8 +50,6 @@ def generate_launch_description():
             ]
         ),
 
-        # ====== TF statik: camera_frame -> camera_optical_frame (standar ROS) ======
-        # rpy = (-90°, 0°, -90°) → quat ≈ [-0.5, -0.5, 0.5, 0.5]
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -65,7 +61,6 @@ def generate_launch_description():
             ]
         ),
 
-        # ====== Node kinematika: publish TF odom -> base_link dari PX4 VehicleOdometry ======
         Node(
             package='offboard_control',
             executable='drone_kinematics',

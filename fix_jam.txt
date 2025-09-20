@@ -1,0 +1,4 @@
+find . -type f -exec touch {} +
+
+colcon build --packages-select offboard_control --cmake-clean-cache
+
