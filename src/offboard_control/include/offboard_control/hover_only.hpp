@@ -1,60 +1,63 @@
-#ifndef HOVER_ONLY_HPP
-#define HOVER_ONLY_HPP
-
+#pragma once
+#include <rclcpp/rclcpp.hpp>
+#include <px4_msgs/msg/vehicle_local_position.hpp>
 #include <px4_msgs/msg/offboard_control_mode.hpp>
 #include <px4_msgs/msg/trajectory_setpoint.hpp>
 #include <px4_msgs/msg/vehicle_command.hpp>
-#include <px4_msgs/msg/vehicle_control_mode.hpp>
-#include <px4_msgs/msg/vehicle_local_position.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <stdint.h>
 
-#include <chrono>
-#include <iostream>
-#include <atomic>
-#include <limits>
 #include <vector>
 #include <numeric>
+#include <limits>
+#include <functional>
+#include <chrono>
 
-using namespace std::chrono;
-using namespace std::chrono_literals;
 using std::placeholders::_1;
+using namespace std::chrono_literals;
 
-enum class Phase { WAIT_INIT, ARMED_SETTLE, TAKEOFF, HOLD };
+class HoverOnly : public rclcpp::Node {
+public:
+  explicit HoverOnly(const std::string &name);
 
+private:
+  // ===== enums & state =====
+  enum class Phase { INIT, WAIT_CMD, ARMED_SETTLE, TAKEOFF, HOLD };
+  Phase phase_{Phase::INIT};
 
-class HoverOnly : public rclcpp::Node
-{
-    public:
-        HoverOnly(const std::string &name);
-        
-        void arm();
-        void land();
+  // ===== subscribers/publishers =====
+  rclcpp::Subscription<px4_msgs::msg::VehicleLocalPosition>::SharedPtr vehicle_local_position_subscriber_;
+  rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr      offboard_control_mode_publisher_;
+  rclcpp::Publisher<px4_msgs::msg::TrajectorySetpoint>::SharedPtr       trajectory_setpoint_publisher_;
+  rclcpp::Publisher<px4_msgs::msg::VehicleCommand>::SharedPtr           vehicle_command_publisher_;
+  rclcpp::TimerBase::SharedPtr                                          timer_;
 
-    private:
-        rclcpp::TimerBase::SharedPtr timer_;
+  // ===== callbacks =====
+  void local_position_callback(px4_msgs::msg::VehicleLocalPosition::ConstSharedPtr msg);
+  void timer_callback();
 
-        rclcpp::Publisher<px4_msgs::msg::OffboardControlMode>::SharedPtr offboard_control_mode_publisher_;
-        rclcpp::Publisher<px4_msgs::msg::TrajectorySetpoint>::SharedPtr trajectory_setpoint_publisher_;
-        rclcpp::Publisher<px4_msgs::msg::VehicleCommand>::SharedPtr vehicle_command_publisher_;
-        rclcpp::Subscription<px4_msgs::msg::VehicleLocalPosition>::SharedPtr vehicle_local_position_subscriber_;
-        
-        uint32_t offboard_setpoint_counter_{0};
+  // ===== helpers =====
+  void publish_offboard_control_mode();
+  void publish_trajectory_setpoint();
+  void publish_vehicle_command(uint16_t command, float param1 = 0.f, float param2 = 0.f);
+  void arm();
+  void land();
 
-        bool   initial_position_set_{false};
-        float initial_x_{0}, initial_y_{0}, initial_z_{0}, initial_yaw_{0.0f};
-        float curr_x_{0}, curr_y_{0}, curr_z_{0}, curr_yaw_{0.0f};
+  // ===== state vars =====
+  float curr_x_{0.f}, curr_y_{0.f}, curr_z_{0.f}, curr_heading_{0.f};
+  float initial_x_{0.f}, initial_y_{0.f}, initial_z_{0.f}, initial_yaw_{0.f};
 
-        std::vector<double> xs_, ys_, zs_;
-        Phase phase_{Phase::WAIT_INIT};
-        const float target_alt_m_ = 10.0f;
-        const float vz_up_        = -1.0f;
-        
-        void local_position_callback(px4_msgs::msg::VehicleLocalPosition::ConstSharedPtr msg);
-        void timer_callback();
-        void publish_offboard_control_mode();
-        void publish_trajectory_setpoint();
-        void publish_vehicle_command(uint16_t command, float param1 = 0.0, float param2 = 0.0); 
+  bool  initial_position_set_{false};
+  bool  offboard_started_{false};
+  bool  start_takeoff_{false};
+
+  int   offboard_setpoint_counter_{0};
+
+  // averaging buffers
+  std::vector<double> xs_, ys_, zs_;
+
+  // ===== params =====
+  float target_alt_m_{2.0f}; // ketinggian target (meter)
+  float vz_up_{0.6f};        // kecepatan naik (m/s). Akan dipakai negatif (NED)
+
+  // param on-set callback
+  rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_cb_handle_;
 };
-
-#endif

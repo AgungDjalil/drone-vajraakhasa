@@ -35,7 +35,7 @@
 
     pos_tracking:
       pos_tracking_enabled: true # ⬅️ harus true untuk elevation/Nvblox
-      publish_tf: true           # publish odom->base_link->camera_link TF
+      publish_tf: false          # publish odom->base_link->camera_link TF
       publish_map_tf: false      # map->odom TF (set true kalau butuh global map)
       area_memory: false
       area_memory_db_path: ""
