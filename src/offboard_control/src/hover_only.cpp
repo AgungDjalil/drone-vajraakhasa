@@ -14,12 +14,10 @@ HoverOnly::HoverOnly(const std::string &name) : Node(name)
   trajectory_setpoint_publisher_   = create_publisher<px4_msgs::msg::TrajectorySetpoint>("/fmu/in/trajectory_setpoint", 10);
   vehicle_command_publisher_       = create_publisher<px4_msgs::msg::VehicleCommand>("/fmu/in/vehicle_command", 10);
 
-  // declare params
   target_alt_m_  = declare_parameter<float>("target_alt_m", 2.0f);
-  vz_up_         = declare_parameter<float>("vz_up", 1.0f);            // positif; akan di-negatifkan untuk NED
-  declare_parameter<bool>("start_takeoff", false);    // trigger manual
+  vz_up_         = declare_parameter<float>("vz_up", 1.0f);
+  declare_parameter<bool>("start_takeoff", false);
 
-  // on-set parameter callback
   param_cb_handle_ = this->add_on_set_parameters_callback(
     [this](const std::vector<rclcpp::Parameter> &params)
         -> rcl_interfaces::msg::SetParametersResult
@@ -62,7 +60,7 @@ void HoverOnly::local_position_callback(px4_msgs::msg::VehicleLocalPosition::Con
     ys_.push_back(curr_y_);
     zs_.push_back(curr_z_);
 
-    if (xs_.size() >= 10) { // cukup 10 sampel biar cepat tapi halus
+    if (xs_.size() >= 10) {
       auto avg = [](const auto &v) { return std::accumulate(v.begin(), v.end(), 0.0) / v.size(); };
       initial_x_   = static_cast<float>(avg(xs_));
       initial_y_   = static_cast<float>(avg(ys_));

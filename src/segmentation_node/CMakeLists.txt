@@ -20,13 +20,33 @@ target_include_directories(cylinder_crop PUBLIC ${PCL_INCLUDE_DIRS})
 target_link_libraries(cylinder_crop ${PCL_LIBRARIES})
 target_compile_definitions(cylinder_crop PRIVATE ${PCL_DEFINITIONS})
 
+add_executable(plane_segmentation_gng src/plane_segmentation_gng.cpp)
+ament_target_dependencies(plane_segmentation_gng rclcpp sensor_msgs pcl_conversions)
+target_include_directories(plane_segmentation_gng PUBLIC ${PCL_INCLUDE_DIRS})
+target_link_libraries(plane_segmentation_gng ${PCL_LIBRARIES})
+target_compile_definitions(plane_segmentation_gng PRIVATE ${PCL_DEFINITIONS})
+
+add_executable(plane_segmentation_ransac src/plane_segmentation_ransac.cpp)
+ament_target_dependencies(plane_segmentation_ransac rclcpp sensor_msgs pcl_conversions)
+target_include_directories(plane_segmentation_ransac PUBLIC ${PCL_INCLUDE_DIRS})
+target_link_libraries(plane_segmentation_ransac ${PCL_LIBRARIES})
+target_compile_definitions(plane_segmentation_ransac PRIVATE ${PCL_DEFINITIONS})
+
+add_executable(landing_circle src/landing_circle.cpp)
+ament_target_dependencies(landing_circle rclcpp sensor_msgs pcl_conversions)
+target_include_directories(landing_circle PUBLIC ${PCL_INCLUDE_DIRS} ${OpenCV_INCLUDE_DIRS})
+target_link_libraries(landing_circle ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
+
 install(
   DIRECTORY include
   DESTINATION include
 )
 
 install(TARGETS
+  landing_circle
   cylinder_crop
+  plane_segmentation_gng
+  plane_segmentation_ransac
   DESTINATION lib/${PROJECT_NAME}
 )
 
