@@ -11,12 +11,9 @@ endif()
 
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(nav_msgs REQUIRED)
 find_package(px4_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
-find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
-find_package(tf2_geometry_msgs REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 
 add_executable(hover_only src/hover_only.cpp)
@@ -24,6 +21,15 @@ target_include_directories(hover_only PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
 ament_target_dependencies(hover_only
+  rclcpp
+  px4_msgs
+)
+
+add_executable(forward_backward src/forward_backward.cpp)
+target_include_directories(forward_backward PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+ament_target_dependencies(forward_backward
   rclcpp
   px4_msgs
 )
@@ -40,21 +46,6 @@ ament_target_dependencies(drone_kinematics
   builtin_interfaces
 )
 
-add_executable(zed_vio_to_px4_second src/zed_vio_to_px4_second.cpp)
-target_include_directories(zed_vio_to_px4_second PUBLIC
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>)
-ament_target_dependencies(zed_vio_to_px4_second
-  rclcpp
-  nav_msgs
-  px4_msgs
-  geometry_msgs
-  tf2
-  tf2_ros
-  tf2_geometry_msgs
-  builtin_interfaces
-)
-
 install(DIRECTORY include/
   DESTINATION include
 )
@@ -62,7 +53,7 @@ install(DIRECTORY include/
 install(TARGETS
   hover_only
   drone_kinematics
-  zed_vio_to_px4_second
+  forward_backward
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 

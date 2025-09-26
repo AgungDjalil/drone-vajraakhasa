@@ -7,7 +7,7 @@ HoverOnly::HoverOnly(const std::string &name) : Node(name)
     auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
 
   vehicle_local_position_subscriber_ = create_subscription<px4_msgs::msg::VehicleLocalPosition>(
-      "/fmu/out/vehicle_local_position_v1", qos,
+      "/fmu/out/vehicle_local_position", qos,
       std::bind(&HoverOnly::local_position_callback, this, _1));
 
   offboard_control_mode_publisher_ = create_publisher<px4_msgs::msg::OffboardControlMode>("/fmu/in/offboard_control_mode", 10);
@@ -60,7 +60,7 @@ void HoverOnly::local_position_callback(px4_msgs::msg::VehicleLocalPosition::Con
     ys_.push_back(curr_y_);
     zs_.push_back(curr_z_);
 
-    if (xs_.size() >= 10) {
+    if (xs_.size() >= 30) {
       auto avg = [](const auto &v) { return std::accumulate(v.begin(), v.end(), 0.0) / v.size(); };
       initial_x_   = static_cast<float>(avg(xs_));
       initial_y_   = static_cast<float>(avg(ys_));
