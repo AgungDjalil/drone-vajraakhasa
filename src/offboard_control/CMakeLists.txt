@@ -15,6 +15,7 @@ find_package(px4_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(builtin_interfaces REQUIRED)
+find_package(tf2 REQUIRED)
 
 add_executable(hover_only src/hover_only.cpp)
 target_include_directories(hover_only PUBLIC
@@ -41,6 +42,9 @@ target_include_directories(safety_landing PUBLIC
 ament_target_dependencies(safety_landing
   rclcpp
   px4_msgs
+  geometry_msgs
+  tf2
+  tf2_ros
 )
 
 add_executable(drone_kinematics src/drone_kinematics.cpp)

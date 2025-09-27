@@ -6,6 +6,9 @@
 #include <px4_msgs/msg/trajectory_setpoint.hpp>
 #include <px4_msgs/msg/vehicle_command.hpp>
 #include <px4_msgs/msg/vehicle_land_detected.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 
 using std::placeholders::_1;
 
@@ -54,6 +57,13 @@ class SafetyLanding : public rclcpp::Node
         std::vector<double> xs_, ys_, zs_;
 
         std::atomic<bool> landed_{false}, ground_contact_{false};
+
+        std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
+        std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+
+        std::string world_frame_{"odom"};
+        std::string safety_frame_{"safety_point"};
+        float speed_safety_mps_{0.6f};  
         
         enum class Phase 
         {
@@ -64,7 +74,8 @@ class SafetyLanding : public rclcpp::Node
             HOLD,
             LANDING,
             IDLE,
-            DISARM
+            DISARM,
+            GOTO_SAFETY
         };
         Phase phase_{Phase::WAIT_CMD};
         

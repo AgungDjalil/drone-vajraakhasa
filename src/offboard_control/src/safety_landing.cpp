@@ -18,6 +18,9 @@ SafetyLanding::SafetyLanding(const std::string &name) : Node(name)
     trajectory_setpoint_publisher_ = create_publisher<px4_msgs::msg::TrajectorySetpoint>("/fmu/in/trajectory_setpoint", 10);
     vehicle_command_publisher_ = create_publisher<px4_msgs::msg::VehicleCommand>("/fmu/in/vehicle_command", 10);
     
+    tf_buffer_   = std::make_unique<tf2_ros::Buffer>(this->get_clock());
+    tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
     declare_parameter<bool>("start_takeoff", false);
     declare_parameter<bool>("landing", false);
     vz_down_max_ = declare_parameter<float>("vz_down_max", 0.5f);
@@ -36,8 +39,6 @@ void SafetyLanding::land_detected_callback(px4_msgs::msg::VehicleLandDetected::C
 {
   landed_.store(msg->landed);
   ground_contact_.store(msg->ground_contact);
-  RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 1000,
-    "[LD] landed=%d ground_contact=%d", (int)landed_.load(), (int)ground_contact_.load());
 }
 
 void SafetyLanding::timer_callback()
@@ -112,7 +113,8 @@ void SafetyLanding::publish_trajectory_setpoint()
     sp.velocity = { NaN, NaN, -v_up_cmd };
     sp.yaw      = initial_yaw_;
 
-    if (climb_rem <= z_tol) {
+    if (climb_rem <= z_tol) 
+    {
       target_x_ = initial_x_ + forward_distance_m_ * std::cos(initial_yaw_);
       target_y_ = initial_y_ + forward_distance_m_ * std::sin(initial_yaw_);
       target_z_ = initial_z_ - target_altitude_m_;
@@ -150,7 +152,8 @@ void SafetyLanding::publish_trajectory_setpoint()
     sp.velocity = { vx_cmd, vy_cmd, vz_cmd };
     sp.yaw      = initial_yaw_;
 
-    if (dxy <= reach_xy_tol_) {
+    if (dxy <= reach_xy_tol_) 
+    {
       phase_ = Phase::HOLD;
       RCLCPP_WARN(get_logger(), "[STATE] HOLD di titik maju (dXY=%.3f m)", dxy);
     }
@@ -181,6 +184,58 @@ void SafetyLanding::publish_trajectory_setpoint()
   {
     sp.position  = { target_x_, target_y_, target_z_ };
     sp.yaw       = initial_yaw_;
+
+    try {
+      auto tf = tf_buffer_->lookupTransform(
+        world_frame_, safety_frame_, tf2::TimePointZero);
+        
+        float sx = tf.transform.translation.x;
+        float sy = tf.transform.translation.y;
+        
+        target_x_ = sy;
+        target_y_ = sx;
+        
+        RCLCPP_WARN(get_logger(),
+          "[STATE] GOTO_SAFETY → (%.2f, %.2f, z=%.2f NED)", target_x_, target_y_, target_z_);
+      phase_ = Phase::GOTO_SAFETY;
+    } catch (const tf2::TransformException &ex) {
+      RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 1000,
+        "TF %s->%s belum ada: %s", world_frame_.c_str(), safety_frame_.c_str(), ex.what());
+    }
+  } 
+  else if (phase_ == Phase::GOTO_SAFETY) 
+  {
+    const float tx = target_x_;
+    const float ty = target_y_;
+    const float tz = target_z_;
+
+    const float ex = tx - curr_x_;
+    const float ey = ty - curr_y_;
+    const float ez = tz - curr_z_;
+    const float dxy = std::hypot(ex, ey);
+
+    float ux = 0.f, uy = 0.f;
+    if (dxy > 1e-3f) 
+    {
+      ux = ex / dxy;
+      uy = ey / dxy;
+    }
+
+    float v_cmd = std::min(speed_safety_mps_, slow_k_ * dxy);
+    float vx_cmd = v_cmd * ux;
+    float vy_cmd = v_cmd * uy;
+
+    float vz_cmd = std::clamp(ez, -vz_hold_max_, vz_hold_max_);
+
+    sp.position = { NaN, NaN, NaN };
+    sp.velocity = { vx_cmd, vy_cmd, vz_cmd };
+    sp.yaw      = initial_yaw_;
+
+    if (dxy <= reach_xy_tol_) 
+    {
+      phase_ = Phase::LANDING;
+      RCLCPP_WARN(get_logger(), "[STATE] HOLD di titik safety (dXY=%.3f m)", dxy);
+    }
   }
 
   sp.timestamp = get_clock()->now().nanoseconds() / 1000;
@@ -190,17 +245,17 @@ void SafetyLanding::publish_trajectory_setpoint()
 void SafetyLanding::publish_offboard_control_mode()
 {
   px4_msgs::msg::OffboardControlMode msg{};
-
   const bool takeoff = (phase_ == Phase::TAKEOFF);
   const bool forward = (phase_ == Phase::FORWARD);
   const bool landing = (phase_ == Phase::LANDING);
+  const bool goto_safety = (phase_ == Phase::GOTO_SAFETY);
 
-  msg.position = !(takeoff || forward) || landing;
-  msg.velocity =  (takeoff || forward) || landing;  
+  msg.position = !(takeoff || forward || goto_safety) || landing;
+  msg.velocity =  (takeoff || forward || goto_safety) || landing;
+
   msg.acceleration = false;
   msg.attitude     = false;
   msg.body_rate    = false;
-
   msg.timestamp    = get_clock()->now().nanoseconds() / 1000;
   offboard_control_mode_publisher_->publish(msg);
 }
@@ -238,7 +293,7 @@ void SafetyLanding::local_position_callback(px4_msgs::msg::VehicleLocalPosition:
     ys_.push_back(curr_y_);
     zs_.push_back(curr_z_);
 
-    if (xs_.size() >= 50) {
+    if (xs_.size() >= 5) {
       auto avg = [](const auto &v) { return std::accumulate(v.begin(), v.end(), 0.0) / v.size(); };
       initial_x_   = static_cast<float>(avg(xs_));
       initial_y_   = static_cast<float>(avg(ys_));
