@@ -16,7 +16,6 @@ def generate_launch_description():
     # Nama frame
     base_link_frame      = LaunchConfiguration('base_link_frame')
     camera_frame         = LaunchConfiguration('camera_frame')
-    camera_optical_frame = LaunchConfiguration('camera_optical_frame')
 
     # Parameter untuk node kinematika (PX4 → TF odom->base_link)
     odom_frame     = LaunchConfiguration('odom_frame')
@@ -47,17 +46,6 @@ def generate_launch_description():
                 cam_x, cam_y, cam_z,
                 cam_qx, cam_qy, cam_qz, cam_qw,
                 base_link_frame, camera_frame
-            ]
-        ),
-
-        Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='tf_cam_to_optical',
-            arguments=[
-                '0', '0', '0',
-                '-0.5', '-0.5', '0.5', '0.5',
-                camera_frame, camera_optical_frame
             ]
         ),
 
