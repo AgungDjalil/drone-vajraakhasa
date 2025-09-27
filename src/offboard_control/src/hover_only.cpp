@@ -154,8 +154,6 @@ void HoverOnly::publish_offboard_control_mode()
 {
   px4_msgs::msg::OffboardControlMode msg{};
 
-  const bool warmup  = !initial_position_set_;
-  const bool settle  = (phase_ == Phase::ARMED_SETTLE);
   const bool takeoff = (phase_ == Phase::TAKEOFF);
   const bool hold    = (phase_ == Phase::HOLD);
   (void)hold;

@@ -26,7 +26,7 @@ class SafetyLanding : public rclcpp::Node
 
         float target_altitude_m_{2.0f}; // (m)
         float vz_up_{1.0}; // (m/s)
-        float forward_distance_m_{1.5};
+        float forward_distance_m_{2.0};
         float reach_xy_tol_{0.10}; // (m)
         float speed_forward_mps_{1.0}; // (m/s)
         float slow_k_{0.8f}; // pelunak kecepatan mendekati target (v=min(vmax, k*jarak)), lebih kecil lebih smooth (0.2 - 1.0)

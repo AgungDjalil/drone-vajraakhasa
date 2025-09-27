@@ -168,13 +168,11 @@ void SafetyLanding::publish_trajectory_setpoint()
     sp.velocity = { 0.001, 0.001, v_down_cmd };      // NED: turun = positif
     sp.yaw      = curr_heading_;
 
-    const bool px4_landed = landed_.load();
-    const bool touch_and_still = ground_contact_.load() && std::fabs(curr_vz_) < 0.10f;
     const bool below_threshold = (land_rem < 0.05f);   // < 5 cm dari baseline
 
     if (below_threshold) 
     {
-        sp.position = { NaN, NaN, curr_z_ };
+        sp.position = { NaN, NaN, NaN };
         sp.velocity = { 0.0001, 0.0001, 0.1 };
         phase_ = Phase::IDLE;
     }
