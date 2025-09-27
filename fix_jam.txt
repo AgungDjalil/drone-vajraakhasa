@@ -1,4 +1,1 @@
-find . -type f -exec touch {} +
-
-colcon build --packages-select offboard_control --cmake-clean-cache
-
+sudo date -s "27 SEP 2025 21:30:00"
