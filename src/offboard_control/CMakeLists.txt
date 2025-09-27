@@ -34,6 +34,15 @@ ament_target_dependencies(forward_backward
   px4_msgs
 )
 
+add_executable(safety_landing src/safety_landing.cpp)
+target_include_directories(safety_landing PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+  $<INSTALL_INTERFACE:include>)
+ament_target_dependencies(safety_landing
+  rclcpp
+  px4_msgs
+)
+
 add_executable(drone_kinematics src/drone_kinematics.cpp)
 target_include_directories(drone_kinematics PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
@@ -54,6 +63,7 @@ install(TARGETS
   hover_only
   drone_kinematics
   forward_backward
+  safety_landing
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 

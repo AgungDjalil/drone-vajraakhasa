@@ -4,16 +4,13 @@ using namespace std::chrono_literals;
 
 ForwardBackward::ForwardBackward(const std::string &name) : Node(name)
 {
-  // QoS sensor data untuk langganan posisi lokal
   rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
   auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
 
-  // === Subscribers ===
   vehicle_local_position_subscriber_ = create_subscription<px4_msgs::msg::VehicleLocalPosition>(
-      "/fmu/out/vehicle_local_position", qos,
+      "/fmu/out/vehicle_local_position_v1", qos,
       std::bind(&ForwardBackward::local_position_callback, this, std::placeholders::_1));
 
-  // === Publishers ===
   offboard_control_mode_publisher_ = create_publisher<px4_msgs::msg::OffboardControlMode>("/fmu/in/offboard_control_mode", 10);
   trajectory_setpoint_publisher_   = create_publisher<px4_msgs::msg::TrajectorySetpoint>("/fmu/in/trajectory_setpoint", 10);
   vehicle_command_publisher_       = create_publisher<px4_msgs::msg::VehicleCommand>("/fmu/in/vehicle_command", 10);
@@ -131,7 +128,7 @@ void ForwardBackward::timer_callback()
     phase_ = Phase::ARMED_SETTLE;
     offboard_started_ = true;
     offboard_setpoint_counter_ = 0;
-    RCLCPP_INFO(get_logger(), "[STATE] OFFBOARD+ARM, masuk ARMED_SETTLE");
+    RCLCPP_INFO(get_logger(), "[STATE] OFFBOARD+ARM");
   }
 
   // (opsional) auto-land setelah waktu lama (contoh: 60s -> 3000 tick @20ms)
