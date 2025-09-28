@@ -30,7 +30,6 @@ def generate_launch_description():
 
         DeclareLaunchArgument('base_link_frame',      default_value='base_link'),
         DeclareLaunchArgument('camera_frame',         default_value='zed_camera_link'),
-        DeclareLaunchArgument('camera_optical_frame', default_value='zed_camera_optical_frame'),
 
         DeclareLaunchArgument('odom_frame',     default_value='odom'),
         DeclareLaunchArgument('veh_odom_topic', default_value='/fmu/out/vehicle_odometry'),
@@ -43,17 +42,6 @@ def generate_launch_description():
                 cam_x, cam_y, cam_z,            
                 cam_qx, cam_qy, cam_qz, cam_qw, 
                 base_link_frame, camera_frame
-            ]
-        ),
-
-        Node(
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            name='tf_cam_to_optical',
-            arguments=[
-                '0', '0', '0',
-                '0', '-1.57079632679', '-1.57079632679',
-                camera_frame, camera_optical_frame
             ]
         ),
 

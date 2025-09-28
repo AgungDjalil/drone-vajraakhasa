@@ -40,6 +40,7 @@ class SafetyLanding : public rclcpp::Node
         bool initial_position_set_{false};
         bool offboard_started_{false};
         bool landing_{false};
+        bool landing_circle_started_{false}; 
         
         // current position
         float curr_x_{0.f}, curr_y_{0.f}, curr_z_{0.f}; // N, E, Down

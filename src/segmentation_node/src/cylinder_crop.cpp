@@ -20,7 +20,7 @@ class CircleCrop : public rclcpp::Node
       declare_parameter<std::string>("input_topic", "/zed/zed_node/point_cloud/cloud_registered");
       declare_parameter<std::string>("output_topic", "/circle_cloud");
 
-      declare_parameter<double>("diameter_m", 3.0);
+      declare_parameter<double>("diameter_m", 5.0);
       declare_parameter<double>("inner_diameter_m", 0.0);
       declare_parameter<double>("center_y", 0.0);
       declare_parameter<double>("center_z", 0.0);

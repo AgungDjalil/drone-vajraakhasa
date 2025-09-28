@@ -77,7 +77,7 @@ class PlaneSegmentationRansac : public rclcpp::Node
             segmented.setModelType(pcl::SACMODEL_NORMAL_PLANE);
             segmented.setMethodType(pcl::SAC_RANSAC);
             segmented.setNormalDistanceWeight(0.03f);
-            segmented.setDistanceThreshold(0.1f);
+            segmented.setDistanceThreshold(0.15f);
             segmented.setMaxIterations(800);
 
             segmented.setAxis(Eigen::Vector3f(0.0f, 0.0f, -1.0f));

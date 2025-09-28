@@ -1,0 +1,8 @@
+MicroXRCEAgent serial -D /dev/ttyUSB0 921600
+ros2 launch offboard_control kinematics.launch.py
+ros2 launch zed_wrapper zed_camera.launch.py camera_model:=zed2i
+ros2 launch segmentation_node publish_safety_point.launch.py
+ros2 run offboard_control safety_landing
+
+ros2 param set /safety_landing start_takeoff true
+ros2 param set /safety_landing landing true

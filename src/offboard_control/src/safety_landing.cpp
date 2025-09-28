@@ -185,6 +185,16 @@ void SafetyLanding::publish_trajectory_setpoint()
     sp.position  = { target_x_, target_y_, target_z_ };
     sp.yaw       = initial_yaw_;
 
+    if (!landing_circle_started_) 
+    {
+      int ret = std::system("ros2 run segmentation_node landing_circle &");
+      if (ret == 0) 
+      {
+          RCLCPP_WARN(get_logger(), "[ACTION] Node landing_circle dipanggil sekali");
+      }
+      landing_circle_started_ = true;
+    }
+
     try {
       auto tf = tf_buffer_->lookupTransform(
         world_frame_, safety_frame_, tf2::TimePointZero);
