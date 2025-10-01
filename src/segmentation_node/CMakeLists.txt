@@ -20,6 +20,7 @@ find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_eigen REQUIRED)
 find_package(Eigen3 3.3 REQUIRED NO_MODULE)   # provide Eigen3::Eigen
+find_package(visualization_msgs REQUIRED)
 
 # PCL definitions/includes
 add_definitions(${PCL_DEFINITIONS})
@@ -54,9 +55,6 @@ ament_target_dependencies(landing_circle
 target_include_directories(landing_circle PUBLIC ${PCL_INCLUDE_DIRS})
 target_link_libraries(landing_circle ${PCL_LIBRARIES} Eigen3::Eigen)
 target_compile_definitions(landing_circle PRIVATE ${PCL_DEFINITIONS})
-
-# ---- install headers (opsional) ----
-install(DIRECTORY include DESTINATION include)
 
 # ---- install binaries ----
 install(TARGETS

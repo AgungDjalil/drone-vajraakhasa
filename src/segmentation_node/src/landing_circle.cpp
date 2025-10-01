@@ -43,10 +43,10 @@ public:
     plane_axes_     = declare_parameter<std::string>("plane_axes",    "xy"); // "xy","yz","xz"
 
     // Geometri area (HANYA diameter aman)
-    safe_diameter_  = declare_parameter<double>("safe_diameter",      1.5);  // meter (disk hijau)
+    safe_diameter_  = declare_parameter<double>("safe_diameter",      1.0);  // meter (disk hijau)
 
     // Grid & kriteria
-    grid_cell_      = declare_parameter<double>("grid_cell",          0.25); // meter/sel
+    grid_cell_      = declare_parameter<double>("grid_cell",          0.21); // meter/sel
     min_pts_cell_   = declare_parameter<int>("min_pts_per_cell",      20);
     fill_ratio_req_ = declare_parameter<double>("safe_fill_ratio",    0.95);
     close_gaps_     = declare_parameter<bool>("close_gaps",           true);

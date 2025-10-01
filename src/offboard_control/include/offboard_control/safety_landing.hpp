@@ -27,9 +27,9 @@ class SafetyLanding : public rclcpp::Node
         rclcpp::TimerBase::SharedPtr timer_;
         rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_cb_handle_;
 
-        float target_altitude_m_{2.0f}; // (m)
+        float target_altitude_m_{6.0f}; // (m)
         float vz_up_{1.0}; // (m/s)
-        float forward_distance_m_{2.0};
+        float forward_distance_m_{5};
         float reach_xy_tol_{0.10}; // (m)
         float speed_forward_mps_{1.0}; // (m/s)
         float slow_k_{0.8f}; // pelunak kecepatan mendekati target (v=min(vmax, k*jarak)), lebih kecil lebih smooth (0.2 - 1.0)
@@ -87,4 +87,5 @@ class SafetyLanding : public rclcpp::Node
         void publish_trajectory_setpoint();
         void publish_offboard_control_mode();
         void publish_vehicle_command(uint16_t command, float param1 = 0.0f, float param2 = 0.0f);
+        void set_landing_gear(bool up);
 };

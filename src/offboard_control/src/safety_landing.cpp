@@ -8,7 +8,7 @@ SafetyLanding::SafetyLanding(const std::string &name) : Node(name)
         auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
 
     vehicle_local_position_subscription_ = create_subscription<px4_msgs::msg::VehicleLocalPosition>(
-        "/fmu/out/vehicle_local_position_v1", qos,
+        "/fmu/out/vehicle_local_position", qos,
         std::bind(&SafetyLanding::local_position_callback, this, _1));
     land_detect_subcription_ = create_subscription<px4_msgs::msg::VehicleLandDetected>(
       "/fmu/out/vehicle_land_detected", qos,
@@ -33,6 +33,21 @@ SafetyLanding::SafetyLanding(const std::string &name) : Node(name)
 
     RCLCPP_INFO(get_logger(), "target_alt=%.2fm, forward=%.2fm, v_forward=%.2fm/s",
                               target_altitude_m_, forward_distance_m_, speed_forward_mps_);
+}
+
+void SafetyLanding::set_landing_gear(bool up)
+{
+  px4_msgs::msg::VehicleCommand cmd{};
+  cmd.command = 2520;
+  cmd.param1  = -1.0f;
+  cmd.param2  = up ? 1.0f : 0.0f;
+  cmd.target_system    = 1;
+  cmd.target_component = 1;
+  cmd.source_system    = 1;
+  cmd.source_component = 1;
+  cmd.from_external    = true;
+  cmd.timestamp        = get_clock()->now().nanoseconds() / 1000;
+  vehicle_command_publisher_->publish(cmd);
 }
 
 void SafetyLanding::land_detected_callback(px4_msgs::msg::VehicleLandDetected::ConstSharedPtr msg) 
@@ -90,6 +105,7 @@ void SafetyLanding::publish_trajectory_setpoint()
   }
   else if (phase_ == Phase::ARMED_SETTLE) 
   {
+    set_landing_gear(false);
     sp.position  = { initial_x_, initial_y_, initial_z_ };
     sp.yaw       = initial_yaw_;
     if (offboard_setpoint_counter_ > 200) {
@@ -115,6 +131,7 @@ void SafetyLanding::publish_trajectory_setpoint()
 
     if (climb_rem <= z_tol) 
     {
+      set_landing_gear(true);
       target_x_ = initial_x_ + forward_distance_m_ * std::cos(initial_yaw_);
       target_y_ = initial_y_ + forward_distance_m_ * std::sin(initial_yaw_);
       target_z_ = initial_z_ - target_altitude_m_;
@@ -175,6 +192,7 @@ void SafetyLanding::publish_trajectory_setpoint()
 
     if (below_threshold) 
     {
+        set_landing_gear(true);
         sp.position = { NaN, NaN, NaN };
         sp.velocity = { 0.0001, 0.0001, 0.1 };
         phase_ = Phase::IDLE;
@@ -241,7 +259,7 @@ void SafetyLanding::publish_trajectory_setpoint()
     sp.velocity = { vx_cmd, vy_cmd, vz_cmd };
     sp.yaw      = initial_yaw_;
 
-    if (dxy <= reach_xy_tol_) 
+    if (dxy <= 0.05) 
     {
       phase_ = Phase::LANDING;
       RCLCPP_WARN(get_logger(), "[STATE] HOLD di titik safety (dXY=%.3f m)", dxy);
