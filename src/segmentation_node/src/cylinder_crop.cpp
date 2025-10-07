@@ -12,10 +12,10 @@
 #include <omp.h>
 #endif
 
-class CircleCrop : public rclcpp::Node
+class CylinderCrop : public rclcpp::Node
 {
   public:
-    CircleCrop() : Node("circle_crop")
+    CylinderCrop() : Node("cylinder_crop")
     {
       declare_parameter<std::string>("input_topic", "/zed/zed_node/point_cloud/cloud_registered");
       declare_parameter<std::string>("output_topic", "/circle_cloud");
@@ -36,7 +36,7 @@ class CircleCrop : public rclcpp::Node
 
       sub_ = create_subscription<sensor_msgs::msg::PointCloud2>(
           in, rclcpp::SensorDataQoS(),
-          std::bind(&CircleCrop::cb, this, std::placeholders::_1));
+          std::bind(&CylinderCrop::cb, this, std::placeholders::_1));
 
       pub_ = create_publisher<sensor_msgs::msg::PointCloud2>(out, 10);
 
@@ -142,7 +142,7 @@ class CircleCrop : public rclcpp::Node
 int main(int argc, char **argv)
 {
   rclcpp::init(argc, argv);
-  rclcpp::spin(std::make_shared<CircleCrop>());
+  rclcpp::spin(std::make_shared<CylinderCrop>());
   rclcpp::shutdown();
   return 0;
 }

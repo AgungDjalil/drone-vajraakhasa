@@ -14,7 +14,7 @@ class PlaneSegmentationRansac : public rclcpp::Node
         PlaneSegmentationRansac() : Node("plane_segmentation_ransac")
         {
             this->declare_parameter<std::string>("input_topic", "/circle_cloud");
-            this->declare_parameter<std::string>("output_topic", "/segmented");
+            this->declare_parameter<std::string>("output_topic", "/segment");
             this->declare_parameter<double>("z_min", -5.0);
             this->declare_parameter<double>("z_max", 5.0);
             this->declare_parameter<double>("leaf_size", 0.05);

@@ -1,12 +1,13 @@
-cmake_minimum_required(VERSION 3.8)
+# CMake >= 3.16 supaya bisa set CMP0074
+cmake_minimum_required(VERSION 3.16)
 project(segmentation_node)
 
-# Compiler flags
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+cmake_policy(SET CMP0074 NEW)
+
+# Warnings & C++17
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
-
-# Use C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -15,14 +16,17 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
-find_package(PCL REQUIRED COMPONENTS io filters)
+find_package(PCL REQUIRED COMPONENTS common filters features search io)  # <- lengkap
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_eigen REQUIRED)
-find_package(Eigen3 3.3 REQUIRED NO_MODULE)   # provide Eigen3::Eigen
+find_package(Eigen3 3.3 REQUIRED NO_MODULE)
 find_package(visualization_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(OpenMP)
 
-# PCL definitions/includes
+# Global PCL defs (pilih salah satu gaya: global atau per-target)
 add_definitions(${PCL_DEFINITIONS})
 
 # ---- cylinder_crop ----
@@ -30,44 +34,57 @@ add_executable(cylinder_crop src/cylinder_crop.cpp)
 ament_target_dependencies(cylinder_crop rclcpp sensor_msgs pcl_conversions)
 target_include_directories(cylinder_crop PUBLIC ${PCL_INCLUDE_DIRS})
 target_link_libraries(cylinder_crop ${PCL_LIBRARIES})
-target_compile_definitions(cylinder_crop PRIVATE ${PCL_DEFINITIONS})
 
 # ---- plane_segmentation_gng ----
 add_executable(plane_segmentation_gng src/plane_segmentation_gng.cpp)
-ament_target_dependencies(plane_segmentation_gng rclcpp sensor_msgs pcl_conversions)
-target_include_directories(plane_segmentation_gng PUBLIC ${PCL_INCLUDE_DIRS})
-target_link_libraries(plane_segmentation_gng ${PCL_LIBRARIES})
-target_compile_definitions(plane_segmentation_gng PRIVATE ${PCL_DEFINITIONS})
+ament_target_dependencies(plane_segmentation_gng rclcpp sensor_msgs pcl_conversions visualization_msgs)
+target_include_directories(plane_segmentation_gng PUBLIC 
+      ${PCL_INCLUDE_DIRS}
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+      $<INSTALL_INTERFACE:include>
+    )
+target_link_libraries(plane_segmentation_gng ${PCL_LIBRARIES} Eigen3::Eigen)
+if(OpenMP_CXX_FOUND)
+  target_link_libraries(plane_segmentation_gng OpenMP::OpenMP_CXX)
+  # JANGAN definisikan _OPENMP manual: hapus baris sebelumnya
+endif()
 
 # ---- plane_segmentation_ransac ----
 add_executable(plane_segmentation_ransac src/plane_segmentation_ransac.cpp)
 ament_target_dependencies(plane_segmentation_ransac rclcpp sensor_msgs pcl_conversions)
 target_include_directories(plane_segmentation_ransac PUBLIC ${PCL_INCLUDE_DIRS})
-target_link_libraries(plane_segmentation_ransac ${PCL_LIBRARIES})
-target_compile_definitions(plane_segmentation_ransac PRIVATE ${PCL_DEFINITIONS})
+target_link_libraries(plane_segmentation_ransac ${PCL_LIBRARIES} Eigen3::Eigen)
 
-# ---- landing_circle (pakai TF & Eigen) ----
+# ---- ddgng_node ----
+add_executable(ddgng_node src/ddgng_node.cpp)
+ament_target_dependencies(ddgng_node  rclcpp sensor_msgs pcl_conversions visualization_msgs)
+target_link_libraries(ddgng_node Eigen3::Eigen)
+if(OpenMP_CXX_FOUND)
+  target_link_libraries(ddgng_node OpenMP::OpenMP_CXX)
+  target_compile_definitions(ddgng_node PRIVATE DDGNG_OPENMP)  # ini makro custom kamu, aman
+endif()
+
+# ---- landing_circle ----
 add_executable(landing_circle src/landing_circle.cpp)
-ament_target_dependencies(landing_circle
-  rclcpp sensor_msgs pcl_conversions
-  tf2 tf2_ros tf2_eigen
-)
-target_include_directories(landing_circle PUBLIC ${PCL_INCLUDE_DIRS})
+ament_target_dependencies(landing_circle rclcpp sensor_msgs pcl_conversions tf2 tf2_ros tf2_eigen)
+target_include_directories(landing_circle PUBLIC 
+    ${PCL_INCLUDE_DIRS}
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<INSTALL_INTERFACE:include>
+  )
 target_link_libraries(landing_circle ${PCL_LIBRARIES} Eigen3::Eigen)
-target_compile_definitions(landing_circle PRIVATE ${PCL_DEFINITIONS})
 
-# ---- install binaries ----
+# ---- install ----
 install(TARGETS
   landing_circle
   cylinder_crop
   plane_segmentation_gng
   plane_segmentation_ransac
+  ddgng_node
   DESTINATION lib/${PROJECT_NAME}
 )
-
-install(DIRECTORY launch/
-  DESTINATION share/${PROJECT_NAME}
-)
+install(DIRECTORY include/ DESTINATION include)
+install(DIRECTORY launch/  DESTINATION share/${PROJECT_NAME})
 
 # ---- lint (opsional) ----
 if(BUILD_TESTING)
