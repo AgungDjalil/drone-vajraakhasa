@@ -30,7 +30,7 @@ class SafetyLanding : public rclcpp::Node
         float target_altitude_m_{6.0f}; // (m)
         float vz_up_{1.0}; // (m/s)
         float forward_distance_m_{5};
-        float reach_xy_tol_{0.10}; // (m)
+        float reach_xy_tol_{0.05}; // (m)
         float speed_forward_mps_{1.0}; // (m/s)
         float slow_k_{0.8f}; // pelunak kecepatan mendekati target (v=min(vmax, k*jarak)), lebih kecil lebih smooth (0.2 - 1.0)
         float vz_hold_max_{0.6f}; // batas koreksi vertikal saat FORWARD (m/s)
