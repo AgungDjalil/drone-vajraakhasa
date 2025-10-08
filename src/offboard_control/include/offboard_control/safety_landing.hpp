@@ -92,6 +92,5 @@ class SafetyLanding : public rclcpp::Node
         void publish_trajectory_setpoint();
         void publish_offboard_control_mode();
         void publish_vehicle_command(uint16_t command, float param1 = 0.0f, float param2 = 0.0f);
-        void set_landing_gear(bool up);
         void request_gear(bool up);
 };
