@@ -7,6 +7,8 @@
 #include <fstream>
 #include <iomanip>
 #include <chrono>
+#include <limits>
+#include <cmath>
 
 // TF
 #include <tf2_ros/transform_listener.h>
@@ -25,16 +27,15 @@ struct Triple {
   std::chrono::steady_clock::time_point t_circle;   // after crop (anchor)
   std::chrono::steady_clock::time_point t_segment;  // when /segmented arrives
 
-  // TF search timing
-  bool has_tf_time = false;
+  // TF timing measured when /plane_colored arrives
+  bool   has_tf_time = false;
   double T_tf_ms = std::numeric_limits<double>::quiet_NaN();
 
   // safety point from TF (in target_frame)
-  double sx = NAN, sy = NAN, sz = NAN;              // z disimpan (opsional)
+  double sx = NAN, sy = NAN, sz = NAN;              // z disimpan, tak ditulis
 
-  // flags
-  bool has_segment = false;
-  bool wrote = false;  // to avoid duplicate writes
+  // write guard
+  bool wrote = false;
 };
 
 class DataRecorder : public rclcpp::Node {
@@ -42,12 +43,12 @@ public:
   DataRecorder() : Node("data_recorder")
   {
     // Params
-    algo_             = declare_parameter<std::string>("algo", "GNG"); // atau "RANSAC"
-    csv_path_         = declare_parameter<std::string>("csv_path", "algo_metrics.csv");
-    topic_raw_        = declare_parameter<std::string>("topic_raw", "/zed/zed_node/point_cloud/cloud_registered");
-    topic_circle_     = declare_parameter<std::string>("topic_circle", "/circle_cloud");
-    topic_segmented_  = declare_parameter<std::string>("topic_segmented", "/segmented");
-    topic_colored_    = declare_parameter<std::string>("topic_colored", "/plane_colored"); // NEW
+    algo_          = declare_parameter<std::string>("algo", "GNG"); // atau "RANSAC"
+    csv_path_      = declare_parameter<std::string>("csv_path", "algo_metrics.csv");
+    topic_raw_     = declare_parameter<std::string>("topic_raw", "/zed/zed_node/point_cloud/cloud_registered");
+    topic_circle_  = declare_parameter<std::string>("topic_circle", "/circle_cloud");
+    topic_segment_ = declare_parameter<std::string>("topic_segment", "/segment");
+    topic_colored_ = declare_parameter<std::string>("topic_colored", "/plane_colored"); // NEW
 
     // TF params
     target_frame_  = declare_parameter<std::string>("target_frame", "odom");
@@ -60,31 +61,32 @@ public:
 
     // CSV
     file_.open(csv_path_, std::ios::out);
-    if (!file_) RCLCPP_FATAL(get_logger(), "Failed to open CSV at %s", csv_path_.c_str());
+    if (!file_) {
+      RCLCPP_FATAL(get_logger(), "Failed to open CSV at %s", csv_path_.c_str());
+    }
     file_ << "stamp_ns,algo,n_in,n_cropped,n_plane,"
              "T_seg_ms,T_tf_ms,"
              "safe_x,safe_y\n";
 
     // Subs
-    sub_raw_      = create_subscription<sensor_msgs::msg::PointCloud2>(topic_raw_, rclcpp::SensorDataQoS(),
-                        std::bind(&DataRecorder::cb_raw, this, _1));
-    sub_circle_   = create_subscription<sensor_msgs::msg::PointCloud2>(topic_circle_, rclcpp::SensorDataQoS(),
-                        std::bind(&DataRecorder::cb_circle, this, _1));
-    sub_segment_  = create_subscription<sensor_msgs::msg::PointCloud2>(topic_segmented_, rclcpp::SensorDataQoS(),
-                        std::bind(&DataRecorder::cb_segment, this, _1));
-    sub_colored_  = create_subscription<sensor_msgs::msg::PointCloud2>(topic_colored_, rclcpp::SensorDataQoS(),
-                        std::bind(&DataRecorder::cb_colored, this, _1)); // NEW
+    sub_raw_     = create_subscription<sensor_msgs::msg::PointCloud2>(topic_raw_, rclcpp::SensorDataQoS(),
+                      std::bind(&DataRecorder::cb_raw, this, _1));
+    sub_circle_  = create_subscription<sensor_msgs::msg::PointCloud2>(topic_circle_, rclcpp::SensorDataQoS(),
+                      std::bind(&DataRecorder::cb_circle, this, _1));
+    sub_segment_ = create_subscription<sensor_msgs::msg::PointCloud2>(topic_segment_, rclcpp::SensorDataQoS(),
+                      std::bind(&DataRecorder::cb_segment, this, _1));
+    sub_colored_ = create_subscription<sensor_msgs::msg::PointCloud2>(topic_colored_, rclcpp::SensorDataQoS(),
+                      std::bind(&DataRecorder::cb_colored, this, _1)); // NEW
 
     // Housekeeping: bersihkan entri lama (mis. 10 detik sejak event terakhir)
     gc_timer_ = create_wall_timer(std::chrono::seconds(5), std::bind(&DataRecorder::gc, this));
 
     RCLCPP_INFO(get_logger(),
       "DataRecorder ready → CSV: %s (algo=%s)\n"
-      "  WRITE when all ready: /circle_cloud + /segmented + /plane_colored\n"
-      "  TF timing measured on %s (TF %s ← %s, timeout=%.0f ms)",
-      csv_path_.c_str(), algo_.c_str(),
-      topic_colored_.c_str(), target_frame_.c_str(), safety_frame_.c_str(),
-      tf_timeout_s_*1000.0);
+      "  WRITE on /plane_colored (needs /circle_cloud + /segmented present)\n"
+      "  TF timing measured on %s | TF: %s ← %s (timeout=%.0f ms)",
+      csv_path_.c_str(), algo_.c_str(), topic_colored_.c_str(),
+      target_frame_.c_str(), safety_frame_.c_str(), tf_timeout_s_*1000.0);
   }
 
 private:
@@ -99,7 +101,7 @@ private:
   bool try_get_safety_point(const rclcpp::Time& stamp, double& x, double& y, double& z)
   {
     try {
-      // case A: lookup by stamp
+      // case A: lookup by stamp (pakai rclcpp::Time + rclcpp::Duration)
       auto tf = tf_buffer_->lookupTransform(
         target_frame_, safety_frame_, stamp,
         rclcpp::Duration::from_seconds(tf_timeout_s_));
@@ -109,7 +111,7 @@ private:
       return true;
     } catch (const std::exception& /*e1*/) {
       try {
-        // case B: fallback latest
+        // case B: fallback latest (pakai tf2::TimePointZero + tf2::Duration)
         auto tf = tf_buffer_->lookupTransform(
           target_frame_, safety_frame_, tf2::TimePointZero,
           tf2::durationFromSec(tf_timeout_s_));
@@ -126,16 +128,21 @@ private:
     }
   }
 
-  // Try to write if all required parts are present
+  static inline double ms_between(const std::chrono::steady_clock::time_point& a,
+                                  const std::chrono::steady_clock::time_point& b) {
+    return std::chrono::duration<double, std::milli>(b - a).count();
+  }
+
+  // Try write when all pieces are ready and not yet written
   void maybe_write(const uint64_t k, Triple& t)
   {
     if (t.wrote) return;
 
-    const bool have_anchor   = (t.t_circle.time_since_epoch().count()  != 0);
-    const bool have_segment  = (t.t_segment.time_since_epoch().count() != 0);
-    const bool have_tf_time  = t.has_tf_time;
+    const bool have_anchor  = (t.t_circle.time_since_epoch().count()  != 0);
+    const bool have_segment = (t.t_segment.time_since_epoch().count() != 0);
+    const bool have_tf      = t.has_tf_time;
 
-    if (!(have_anchor && have_segment && have_tf_time)) return;
+    if (!(have_anchor && have_segment && have_tf)) return;
 
     const double T_seg_ms = ms_between(t.t_circle, t.t_segment);
 
@@ -150,7 +157,7 @@ private:
     if (std::isfinite(t.sx) && std::isfinite(t.sy)) {
       file_ << t.sx << "," << t.sy << "\n";
     } else {
-      file_ << "," << "," << "\n";  // ",,"
+      file_ << "," << "," << "\n";  // safe_x,safe_y kosong → ",,"
     }
 
     t.wrote = true;
@@ -179,17 +186,17 @@ private:
     auto &t = table_[k];
     t.n_plane = pc_size(*msg);
     t.t_segment = std::chrono::steady_clock::now();
-    t.has_segment = true;
+    // Tidak menulis CSV di sini; biarkan ditulis saat /plane_colored (setelah ukur T_tf_ms)
     maybe_write(k, t);
   }
 
-  // NEW: measure TF lookup duration when plane_colored arrives
+  // NEW: ukur lama TF lookup saat /plane_colored datang, lalu tulis CSV
   void cb_colored(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
   {
     const uint64_t k = stamp_key(msg->header);
     auto &t = table_[k];
 
-    // Measure TF lookup duration
+    // Ukur durasi TF lookup
     auto t0 = std::chrono::steady_clock::now();
     double sx, sy, sz;
     bool got_tf = try_get_safety_point(rclcpp::Time(msg->header.stamp), sx, sy, sz);
@@ -208,33 +215,22 @@ private:
     const auto now = std::chrono::steady_clock::now();
     for (auto it = table_.begin(); it != table_.end(); ) {
       double age_s = 0.0;
-
       const auto &rec = it->second;
-      auto t_last = rec.t_segment;
-      if (rec.has_tf_time) {
-        // kalau TF sudah diukur pada /plane_colored, anggap event ini yang terbaru
-        // (kita tidak menyimpan timestampnya, jadi gunakan t_segment bila ada; kalau tidak, t_circle)
-      }
+
       if (rec.t_segment.time_since_epoch().count() != 0) {
         age_s = std::chrono::duration<double>(now - rec.t_segment).count();
       } else if (rec.t_circle.time_since_epoch().count() != 0) {
         age_s = std::chrono::duration<double>(now - rec.t_circle).count();
       }
 
-      // Kalau sudah ditulis atau terlalu tua → hapus
       if (rec.wrote || age_s > 10.0) it = table_.erase(it);
       else ++it;
     }
   }
 
-  static inline double ms_between(const std::chrono::steady_clock::time_point& a,
-                                  const std::chrono::steady_clock::time_point& b) {
-    return std::chrono::duration<double, std::milli>(b - a).count();
-  }
-
   // Params/state
   std::string algo_, csv_path_;
-  std::string topic_raw_, topic_circle_, topic_segmented_, topic_colored_;
+  std::string topic_raw_, topic_circle_, topic_segment_, topic_colored_;
   std::string target_frame_, safety_frame_;
   double tf_timeout_s_;
 
