@@ -9,6 +9,7 @@
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <std_srvs/srv/set_bool.hpp>
 
 using std::placeholders::_1;
 
@@ -26,6 +27,10 @@ class SafetyLanding : public rclcpp::Node
         rclcpp::Subscription<px4_msgs::msg::VehicleLandDetected>::SharedPtr land_detect_subcription_;
         rclcpp::TimerBase::SharedPtr timer_;
         rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_cb_handle_;
+        rclcpp::Client<std_srvs::srv::SetBool>::SharedPtr gear_client_;
+
+        std::string gear_service_name_ = "/gear/set_up_down";
+        bool use_gear_service_ = true;
 
         float target_altitude_m_{6.0f}; // (m)
         float vz_up_{1.0}; // (m/s)
@@ -88,4 +93,5 @@ class SafetyLanding : public rclcpp::Node
         void publish_offboard_control_mode();
         void publish_vehicle_command(uint16_t command, float param1 = 0.0f, float param2 = 0.0f);
         void set_landing_gear(bool up);
+        void request_gear(bool up);
 };

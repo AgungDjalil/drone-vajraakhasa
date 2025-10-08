@@ -17,9 +17,14 @@ SafetyLanding::SafetyLanding(const std::string &name) : Node(name)
     offboard_control_mode_publisher_ = create_publisher<px4_msgs::msg::OffboardControlMode>("/fmu/in/offboard_control_mode", 10);
     trajectory_setpoint_publisher_ = create_publisher<px4_msgs::msg::TrajectorySetpoint>("/fmu/in/trajectory_setpoint", 10);
     vehicle_command_publisher_ = create_publisher<px4_msgs::msg::VehicleCommand>("/fmu/in/vehicle_command", 10);
-    
+      
+    gear_service_name_ = declare_parameter<std::string>("gear_service_name", "/gear/set_up_down");
+    use_gear_service_  = declare_parameter<bool>("use_gear_service", true);
+
     tf_buffer_   = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+
+    gear_client_ = this->create_client<std_srvs::srv::SetBool>(gear_service_name_);
 
     declare_parameter<bool>("start_takeoff", false);
     declare_parameter<bool>("landing", false);
@@ -35,19 +40,47 @@ SafetyLanding::SafetyLanding(const std::string &name) : Node(name)
                               target_altitude_m_, forward_distance_m_, speed_forward_mps_);
 }
 
-void SafetyLanding::set_landing_gear(bool up)
+void SafetyLanding::request_gear(bool up)
 {
-  px4_msgs::msg::VehicleCommand cmd{};
-  cmd.command = 2520;
-  cmd.param1  = -1.0f;
-  cmd.param2  = up ? 1.0f : 0.0f;
-  cmd.target_system    = 1;
-  cmd.target_component = 1;
-  cmd.source_system    = 1;
-  cmd.source_component = 1;
-  cmd.from_external    = true;
-  cmd.timestamp        = get_clock()->now().nanoseconds() / 1000;
-  vehicle_command_publisher_->publish(cmd);
+  if (!use_gear_service_) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
+      "[GEAR] use_gear_service=false → fallback VehicleCommand (%s)",
+      up ? "UP" : "DOWN");
+    return;
+  }
+
+  if (!gear_client_) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
+      "[GEAR] gear_client_ belum dibuat, fallback VehicleCommand");
+    return;
+  }
+
+  if (!gear_client_->service_is_ready()) {
+    RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 2000,
+      "[GEAR] Service %s belum siap, fallback VehicleCommand (%s)",
+      gear_service_name_.c_str(), up ? "UP" : "DOWN");
+    return;
+  }
+
+  auto req = std::make_shared<std_srvs::srv::SetBool::Request>();
+  req->data = up;
+
+  gear_client_->async_send_request(req,
+    [this, up](rclcpp::Client<std_srvs::srv::SetBool>::SharedFuture fut) {
+      try {
+        auto resp = fut.get();
+        if (resp->success) {
+          RCLCPP_INFO(this->get_logger(), "[GEAR] Service OK: %s", resp->message.c_str());
+        } else {
+          RCLCPP_WARN(this->get_logger(), "[GEAR] Service gagal (%s), fallback VehicleCommand (%s)",
+                      resp->message.c_str(), up ? "UP" : "DOWN");
+        }
+      } catch (const std::exception &e) {
+        RCLCPP_ERROR(this->get_logger(), "[GEAR] Exception service: %s. Fallback VehicleCommand.", e.what());
+      }
+    });
+
+  RCLCPP_INFO(get_logger(), "[GEAR] Request via service: %s", up ? "UP" : "DOWN");
 }
 
 void SafetyLanding::land_detected_callback(px4_msgs::msg::VehicleLandDetected::ConstSharedPtr msg) 
@@ -105,7 +138,7 @@ void SafetyLanding::publish_trajectory_setpoint()
   }
   else if (phase_ == Phase::ARMED_SETTLE) 
   {
-    set_landing_gear(false);
+    request_gear(false);
     sp.position  = { initial_x_, initial_y_, initial_z_ };
     sp.yaw       = initial_yaw_;
     if (offboard_setpoint_counter_ > 200) {
@@ -131,7 +164,7 @@ void SafetyLanding::publish_trajectory_setpoint()
 
     if (climb_rem <= z_tol) 
     {
-      set_landing_gear(true);
+      request_gear(true);
       target_x_ = initial_x_ + forward_distance_m_ * std::cos(initial_yaw_);
       target_y_ = initial_y_ + forward_distance_m_ * std::sin(initial_yaw_);
       target_z_ = initial_z_ - target_altitude_m_;
@@ -177,6 +210,7 @@ void SafetyLanding::publish_trajectory_setpoint()
   }
   else if (phase_ == Phase::LANDING)
   {
+    request_gear(false);
     const float NaN = std::numeric_limits<float>::quiet_NaN();
 
     const float land_rem = initial_z_ - curr_z_;
@@ -192,7 +226,6 @@ void SafetyLanding::publish_trajectory_setpoint()
 
     if (below_threshold) 
     {
-        set_landing_gear(true);
         sp.position = { NaN, NaN, NaN };
         sp.velocity = { 0.0001, 0.0001, 0.1 };
         phase_ = Phase::IDLE;

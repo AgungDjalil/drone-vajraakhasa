@@ -16,6 +16,10 @@ find_package(geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(builtin_interfaces REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(std_srvs REQUIRED)
+
+add_executable(gear_service_node src/gear_service_node.cpp)
+ament_target_dependencies(gear_service_node rclcpp px4_msgs std_srvs)
 
 add_executable(hover_only src/hover_only.cpp)
 target_include_directories(hover_only PUBLIC
@@ -45,6 +49,7 @@ ament_target_dependencies(safety_landing
   geometry_msgs
   tf2
   tf2_ros
+  std_srvs
 )
 
 add_executable(drone_kinematics src/drone_kinematics.cpp)
@@ -68,6 +73,7 @@ install(TARGETS
   drone_kinematics
   forward_backward
   safety_landing
+  gear_service_node
   RUNTIME DESTINATION lib/${PROJECT_NAME}
 )
 

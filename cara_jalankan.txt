@@ -6,3 +6,8 @@ ros2 run offboard_control safety_landing
 
 ros2 param set /safety_landing start_takeoff true
 ros2 param set /safety_landing landing true
+
+ros2 run metric_recorder record --ros-args -p csv_path:=test.csv
+
+ros2 service call /gear/set_up_down std_srvs/srv/SetBool "{data: true}"   # UP
+ros2 service call /gear/set_up_down std_srvs/srv/SetBool "{data: false}"  # DOWN
